@@ -1,0 +1,64 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code - keep launch.json and extensions.json for team consistency
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ── Secrets / Firebase ───────────────────────────────────────────────────────
+# NEVER commit these — teammates get their own copies from the team vault
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+.env
+.env.*
+*.jks
+*.keystore
+key.properties
+
+# ── Generated files (run build_runner locally) ────────────────────────────────
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+*.gr.dart
