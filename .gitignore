@@ -46,6 +46,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+android/app/google-services.json
+
 # ── Secrets / Firebase ───────────────────────────────────────────────────────
 # NEVER commit these — teammates get their own copies from the team vault
 google-services.json
