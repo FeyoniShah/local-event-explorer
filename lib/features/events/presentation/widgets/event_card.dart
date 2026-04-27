@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../data/event_model.dart';
- 
+
 class EventCard extends StatelessWidget {
   final EventModel event;
   final VoidCallback onTap;
-  const EventCard({super.key, required this.event, required this.onTap});
- 
+  final dynamic userPosition; // NEW
+
+  const EventCard({
+    super.key,
+    required this.event,
+    required this.onTap,
+    this.userPosition, // NEW
+  });
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -38,8 +45,7 @@ class EventCard extends StatelessWidget {
                         label: Text(event.category.toUpperCase(),
                             style: const TextStyle(fontSize: 10)),
                         padding: EdgeInsets.zero,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       const Spacer(),
                       Text(
@@ -60,24 +66,24 @@ class EventCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 14,
-                          color: Colors.grey),
+                      const Icon(Icons.location_on,
+                          size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Expanded(child: Text(event.venue,
-                          style: const TextStyle(color: Colors.grey,
-                              fontSize: 13),
-                          overflow: TextOverflow.ellipsis)),
+                      Expanded(
+                          child: Text(event.venue,
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 13),
+                              overflow: TextOverflow.ellipsis)),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.people, size: 14,
-                          color: Colors.grey),
+                      const Icon(Icons.people, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text("${event.attendeeCount} attending",
-                          style: const TextStyle(color: Colors.grey,
-                              fontSize: 13)),
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 13)),
                     ],
                   ),
                 ],

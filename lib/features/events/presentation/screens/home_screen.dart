@@ -17,7 +17,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   String _selectedCategory = 'all';
   final List<String> _categories = [
-    'all', 'music', 'tech', 'art', 'sports', 'food'
+    'all',
+    'music',
+    'tech',
+    'art',
+    'sports',
+    'food'
   ];
 
   List<EventModel> _filterByCategory(List<EventModel> events) {
@@ -37,9 +42,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     // Watch recommended events — AI sorted
-    final recommended = ref.watch(recommendedEventsProvider);
+    final eventsAsync = ref.watch(eventsProvider);
     final savedEvents = ref.watch(savedEventsProvider);
-    final filtered = _filterByCategory(recommended);
+    //final filtered = _filterByCategory(recommended);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,103 +68,114 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: GestureDetector(
-              onTap: () => context.push('/search'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.grey, size: 20),
-                    SizedBox(width: 8),
-                    Text('Search events, venues...',
-                        style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ),
-          ),
+      body: eventsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(
+          child: Text('Error: $err'),
+        ),
+        data: (events) {
+          final savedEvents = ref.watch(savedEventsProvider);
+          final filtered = _filterByCategory(events);
 
-          // Category chips
-          SizedBox(
-            height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final cat = _categories[index];
-                return CategoryChip(
-                  label: cat[0].toUpperCase() + cat.substring(1),
-                  isSelected: cat == _selectedCategory,
-                  onTap: () =>
-                      setState(() => _selectedCategory = cat),
-                );
-              },
-            ),
-          ),
-
-          // AI label
-          if (filtered.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.auto_awesome,
-                      size: 16, color: Colors.amber),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Recommended for you',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[400],
-                      fontSize: 13,
+          return Column(
+            children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: GestureDetector(
+                  onTap: () => context.push('/search'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Events list
-          Expanded(
-            child: filtered.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: const Row(
                       children: [
-                        Icon(Icons.event_busy,
-                            size: 60, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text('No events in this category',
+                        Icon(Icons.search, color: Colors.grey, size: 20),
+                        SizedBox(width: 8),
+                        Text('Search events, venues...',
                             style: TextStyle(color: Colors.grey)),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final event = filtered[index];
-                      final isSaved =
-                          savedEvents.any((e) => e.id == event.id);
-                      return EventCard(
-                        event: event,
-                        onTap: () => context.push('/event/${event.id}'),
-                      );
-                    },
                   ),
-          ),
-        ],
+                ),
+              ),
+
+              // Category chips
+              SizedBox(
+                height: 48,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _categories.length,
+                  itemBuilder: (context, index) {
+                    final cat = _categories[index];
+                    return CategoryChip(
+                      label: cat[0].toUpperCase() + cat.substring(1),
+                      isSelected: cat == _selectedCategory,
+                      onTap: () => setState(() => _selectedCategory = cat),
+                    );
+                  },
+                ),
+              ),
+
+              // AI label
+              if (filtered.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome,
+                          size: 16, color: Colors.amber),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Recommended for you',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[400],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Events list
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.event_busy,
+                                size: 60, color: Colors.grey),
+                            SizedBox(height: 12),
+                            Text('No events in this category',
+                                style: TextStyle(color: Colors.grey)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final event = filtered[index];
+                          final isSaved =
+                              savedEvents.any((e) => e.id == event.id);
+
+                          return EventCard(
+                            event: event,
+                            onTap: () => context.push('/event/${event.id}'),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
