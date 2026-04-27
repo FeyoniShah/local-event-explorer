@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/app_theme.dart';
 import 'routing/app_router.dart';
 import 'firebase_options.dart';
+import 'features/notifications/data/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
