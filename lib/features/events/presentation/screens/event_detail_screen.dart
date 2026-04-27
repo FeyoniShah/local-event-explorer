@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../data/event_model.dart';
 import '../../data/dummy_events.dart';
 import '../providers/saved_events_provider.dart';
+import '../../../auth/data/auth_service.dart';
+import '../../../../features/notifications/data/notification_service.dart';
 
 // Change StatefulWidget to ConsumerStatefulWidget
 class EventDetailScreen extends ConsumerStatefulWidget {
@@ -46,17 +48,41 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                   isSaved ? Icons.bookmark : Icons.bookmark_outline,
                   color: isSaved ? Colors.amber : Colors.white,
                 ),
-                onPressed: () {
+                onPressed: () async {
                   ref.read(savedEventsProvider.notifier).toggleSave(event);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(isSaved
-                          ? 'Removed from saved!'
-                          : 'Event saved! 🔖'),
-                      backgroundColor: isSaved ? Colors.grey : Colors.green,
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
+
+                  // Schedule or cancel notification
+                  if (!isSaved) {
+                    // User is saving — schedule reminder
+                    await NotificationService().scheduleEventReminder(event);
+                  } else {
+                    // User is unsaving — cancel reminder
+                    await NotificationService().cancelEventReminder(event.id);
+                  }
+
+                  // Sync to Firestore in background
+                  try {
+                    final authService = ref.read(authServiceProvider);
+                    if (isSaved) {
+                      await authService.unsaveEvent(event.id);
+                    } else {
+                      await authService.saveEvent(event.id);
+                    }
+                  } catch (e) {
+                    ref.read(savedEventsProvider.notifier).toggleSave(event);
+                  }
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(isSaved
+                            ? 'Removed from saved!'
+                            : 'Event saved! Reminder set 🔔'),
+                        backgroundColor: isSaved ? Colors.grey : Colors.green,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  }
                 },
               ),
             ],

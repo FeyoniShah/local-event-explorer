@@ -6,6 +6,7 @@ import '../features/onboarding/presentation/screens/splash_screen.dart';
 import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 import '../features/auth/presentation/screens/interest_picker_screen.dart';
+import '../features/auth/data/auth_service.dart';
 import '../features/events/presentation/screens/home_screen.dart';
 import '../features/events/presentation/screens/event_detail_screen.dart';
 import '../features/events/presentation/screens/search_screen.dart';
@@ -13,7 +14,6 @@ import '../features/map/presentation/screens/map_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../shared/widgets/main_shell.dart';
 
-// Route names — use these constants everywhere, never raw strings
 class AppRoutes {
   static const splash = '/';
   static const onboarding = '/onboarding';
@@ -29,9 +29,13 @@ class AppRoutes {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Listen to auth state changes so router rebuilds on login/logout
+  final authState = ref.watch(authStateProvider);
+
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
+    refreshListenable: _AuthStateNotifier(ref),
     routes: [
       // ── Splash ──────────────────────────────────────────
       GoRoute(
@@ -97,15 +101,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
 
-    // Redirect logic — check auth state here later
     redirect: (context, state) {
-      // TODO: add auth guard once Firebase auth is wired
+      final isLoggedIn = authState.valueOrNull != null;
+
+      final publicRoutes = [
+        AppRoutes.splash,
+        AppRoutes.onboarding,
+        AppRoutes.login,
+        AppRoutes.interestPicker,
+      ];
+      final isPublicRoute = publicRoutes.contains(state.matchedLocation);
+
+      // Not logged in and trying to access a protected route
+      if (!isLoggedIn && !isPublicRoute) return AppRoutes.login;
+
+      // Logged in and trying to access login — send to home
+      if (isLoggedIn && state.matchedLocation == AppRoutes.login) {
+        return AppRoutes.home;
+      }
+
       return null;
     },
   );
 });
 
-// Temporary placeholder for chat screen
+// Notifier that tells GoRouter to re-evaluate redirect when auth changes
+class _AuthStateNotifier extends ChangeNotifier {
+  _AuthStateNotifier(Ref ref) {
+    ref.listen(authStateProvider, (_, __) => notifyListeners());
+  }
+}
+
+// Chat placeholder screen
 class ChatPlaceholderScreen extends StatelessWidget {
   final String eventId;
   const ChatPlaceholderScreen({super.key, required this.eventId});
@@ -119,7 +146,8 @@ class ChatPlaceholderScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.chat_bubble_outline,
-                size: 64, color: Theme.of(context).colorScheme.primary),
+                size: 64,
+                color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             const Text(
               'Group Chat',
