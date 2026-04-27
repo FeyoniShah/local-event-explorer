@@ -50,8 +50,10 @@ class EventCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         event.isFree
-                            ? 'FREE'
-                            : '₹${event.price?.toStringAsFixed(0)}',
+                            ? '🎉 Free'
+                            : event.price != null
+                                ? '₹${event.price!.toStringAsFixed(0)}'
+                                : 'See event page',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: event.isFree ? Colors.green : null,
@@ -81,7 +83,10 @@ class EventCard extends StatelessWidget {
                     children: [
                       const Icon(Icons.people, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text("${event.attendeeCount} attending",
+                      Text(
+                          event.attendeeCount > 0
+                              ? '${event.attendeeCount} attending'
+                              : 'Check event page',
                           style: const TextStyle(
                               color: Colors.grey, fontSize: 13)),
                     ],
