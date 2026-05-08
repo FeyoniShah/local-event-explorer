@@ -5,7 +5,7 @@ import 'event_model.dart';
 
 class EventRepository {
   static const String _rapidApiKey =
-      '78c1137710msh081a9ebd9b69fc3p183413jsn8ce3e37859a0';
+      '7b0e25b9f5msh90f259f408094c2p19a4bfjsnd2676afa04b2';
   static const String _rapidApiHost = 'real-time-events-search.p.rapidapi.com';
 
   static const Map<String, List<double>> _cityCoords = {
@@ -173,19 +173,25 @@ class EventRepository {
         t.contains('dj') ||
         t.contains('band') ||
         t.contains('garba') ||
-        t.contains('bollywood')) return 'music';
+        t.contains('bollywood')) {
+      return 'music';
+    }
     if (t.contains('cricket') ||
         t.contains('ipl') ||
         t.contains('football') ||
         t.contains('match') ||
         t.contains('sport') ||
-        t.contains('marathon')) return 'sports';
+        t.contains('marathon')) {
+      return 'sports';
+    }
     if (t.contains('comedy') ||
         t.contains('theatre') ||
         t.contains('dance') ||
         t.contains('art') ||
         t.contains('exhibition') ||
-        t.contains('film')) return 'art';
+        t.contains('film')) {
+      return 'art';
+    }
     if (t.contains('tech') ||
         t.contains('workshop') ||
         t.contains('hackathon') ||
@@ -193,16 +199,22 @@ class EventRepository {
         t.contains('meetup') ||
         t.contains('conference') ||
         t.contains('flutter') ||
-        t.contains('ai ')) return 'tech';
+        t.contains('ai ')) {
+      return 'tech';
+    }
     if (t.contains('food') ||
         t.contains('mela') ||
         t.contains('fair') ||
         t.contains('carnival') ||
-        t.contains('culinary')) return 'food';
+        t.contains('culinary')) {
+      return 'food';
+    }
     if (t.contains('yoga') ||
         t.contains('wellness') ||
         t.contains('community') ||
-        t.contains('charity')) return 'community';
+        t.contains('charity')) {
+      return 'community';
+    }
     return 'music';
   }
 }
