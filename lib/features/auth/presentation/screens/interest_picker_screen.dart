@@ -329,7 +329,7 @@ class _InterestPickerScreenState extends State<InterestPickerScreen> {
                         borderRadius: BorderRadius.circular(12),
                         color: isSelected
                             ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.surfaceVariant,
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
                         border: Border.all(
                           color: isSelected
                               ? Theme.of(context).colorScheme.primary

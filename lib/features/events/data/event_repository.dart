@@ -4,7 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'event_model.dart';
 
 class EventRepository {
-  static const String _rapidApiKey = '7b0e25b9f5msh90f259f408094c2p19a4bfjsnd2676afa04b2';
+  static const String _rapidApiKey =
+      '7b0e25b9f5msh90f259f408094c2p19a4bfjsnd2676afa04b2';
   static const String _rapidApiHost = 'real-time-events-search.p.rapidapi.com';
 
   static const Map<String, List<double>> _cityCoords = {
@@ -54,10 +55,6 @@ class EventRepository {
         'X-RapidAPI-Key': _rapidApiKey,
         'X-RapidAPI-Host': _rapidApiHost,
       }).timeout(const Duration(seconds: 15));
-
-      print("API URL: $uri");
-      print("STATUS CODE: ${response.statusCode}");
-      print("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -137,27 +134,10 @@ class EventRepository {
       }
 
       String bookingUrl = link;
-
-      final tickets = item['ticket_links'];
-
-      if (tickets is List && tickets.isNotEmpty) {
-
-        final firstTicket = tickets.first;
-
-        if (firstTicket is Map && firstTicket['link'] != null) {
-          bookingUrl = firstTicket['link'].toString();
-        }
+      final tickets = item['ticket_links'] as List?;
+      if (tickets != null && tickets.isNotEmpty) {
+        bookingUrl = tickets.first['link']?.toString() ?? link;
       }
-
-      if (bookingUrl.isEmpty) {
-        bookingUrl =
-            item['event_link']?.toString() ??
-                item['url']?.toString() ??
-                item['link']?.toString() ??
-                '';
-      }
-
-      print("BOOKING URL: $bookingUrl");
 
       final isFree = name.toLowerCase().contains('free') ||
           description.toLowerCase().contains('free entry') ||
@@ -193,19 +173,25 @@ class EventRepository {
         t.contains('dj') ||
         t.contains('band') ||
         t.contains('garba') ||
-        t.contains('bollywood')) return 'music';
+        t.contains('bollywood')) {
+      return 'music';
+    }
     if (t.contains('cricket') ||
         t.contains('ipl') ||
         t.contains('football') ||
         t.contains('match') ||
         t.contains('sport') ||
-        t.contains('marathon')) return 'sports';
+        t.contains('marathon')) {
+      return 'sports';
+    }
     if (t.contains('comedy') ||
         t.contains('theatre') ||
         t.contains('dance') ||
         t.contains('art') ||
         t.contains('exhibition') ||
-        t.contains('film')) return 'art';
+        t.contains('film')) {
+      return 'art';
+    }
     if (t.contains('tech') ||
         t.contains('workshop') ||
         t.contains('hackathon') ||
@@ -213,16 +199,22 @@ class EventRepository {
         t.contains('meetup') ||
         t.contains('conference') ||
         t.contains('flutter') ||
-        t.contains('ai ')) return 'tech';
+        t.contains('ai ')) {
+      return 'tech';
+    }
     if (t.contains('food') ||
         t.contains('mela') ||
         t.contains('fair') ||
         t.contains('carnival') ||
-        t.contains('culinary')) return 'food';
+        t.contains('culinary')) {
+      return 'food';
+    }
     if (t.contains('yoga') ||
         t.contains('wellness') ||
         t.contains('community') ||
-        t.contains('charity')) return 'community';
+        t.contains('charity')) {
+      return 'community';
+    }
     return 'music';
   }
 }
