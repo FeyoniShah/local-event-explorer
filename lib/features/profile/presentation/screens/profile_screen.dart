@@ -571,7 +571,11 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     TextButton(
                       onPressed: () async {
-                        Navigator.pop(context);
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          context.go('/');
+                        }
                         // Proper Firebase sign out
                         await FirebaseAuth.instance.signOut();
                         if (context.mounted) context.go(AppRoutes.login);

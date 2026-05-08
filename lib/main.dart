@@ -89,7 +89,7 @@ class LocalEventExplorerApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Local Event Explorer',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark,
+      theme: AppTheme.light,
       routerConfig: router,
     );
   }

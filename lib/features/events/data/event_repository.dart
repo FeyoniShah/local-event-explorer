@@ -4,8 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'event_model.dart';
 
 class EventRepository {
-  static const String _rapidApiKey =
-      '78c1137710msh081a9ebd9b69fc3p183413jsn8ce3e37859a0';
+  static const String _rapidApiKey = '7b0e25b9f5msh90f259f408094c2p19a4bfjsnd2676afa04b2';
   static const String _rapidApiHost = 'real-time-events-search.p.rapidapi.com';
 
   static const Map<String, List<double>> _cityCoords = {
@@ -55,6 +54,10 @@ class EventRepository {
         'X-RapidAPI-Key': _rapidApiKey,
         'X-RapidAPI-Host': _rapidApiHost,
       }).timeout(const Duration(seconds: 15));
+
+      print("API URL: $uri");
+      print("STATUS CODE: ${response.statusCode}");
+      print("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -134,10 +137,27 @@ class EventRepository {
       }
 
       String bookingUrl = link;
-      final tickets = item['ticket_links'] as List?;
-      if (tickets != null && tickets.isNotEmpty) {
-        bookingUrl = tickets.first['link']?.toString() ?? link;
+
+      final tickets = item['ticket_links'];
+
+      if (tickets is List && tickets.isNotEmpty) {
+
+        final firstTicket = tickets.first;
+
+        if (firstTicket is Map && firstTicket['link'] != null) {
+          bookingUrl = firstTicket['link'].toString();
+        }
       }
+
+      if (bookingUrl.isEmpty) {
+        bookingUrl =
+            item['event_link']?.toString() ??
+                item['url']?.toString() ??
+                item['link']?.toString() ??
+                '';
+      }
+
+      print("BOOKING URL: $bookingUrl");
 
       final isFree = name.toLowerCase().contains('free') ||
           description.toLowerCase().contains('free entry') ||
