@@ -1,0 +1,194 @@
+1. Create edit_interests_screen.dart
+
+Path:
+
+lib/features/profile/presentation/screens/edit_interests_screen.dart
+
+Code:
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class EditInterestsScreen extends StatefulWidget {
+  const EditInterestsScreen({super.key});
+
+  @override
+  State<EditInterestsScreen> createState() =>
+      _EditInterestsScreenState();
+}
+
+class _EditInterestsScreenState
+    extends State<EditInterestsScreen> {
+
+  final List<String> availableInterests = [
+    'Music',
+    'Tech',
+    'Sports',
+    'Food',
+    'Art',
+    'Business',
+    'Gaming',
+    'Fitness',
+    'Movies',
+    'Education',
+  ];
+
+  List<String> selectedInterests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    loadInterests();
+  }
+
+  Future<void> loadInterests() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final interests =
+        prefs.getStringList('user_interests') ?? [];
+
+    setState(() {
+      selectedInterests = interests;
+    });
+  }
+
+  Future<void> saveInterests() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setStringList(
+      'user_interests',
+      selectedInterests,
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Interests updated successfully'),
+        ),
+      );
+
+      Navigator.pop(context);
+    }
+  }
+
+  void toggleInterest(String interest) {
+    setState(() {
+      if (selectedInterests.contains(interest)) {
+        selectedInterests.remove(interest);
+      } else {
+        selectedInterests.add(interest);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Interests'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: availableInterests.map((interest) {
+                final isSelected =
+                    selectedInterests.contains(interest);
+
+                return FilterChip(
+                  label: Text(interest),
+                  selected: isSelected,
+                  onSelected: (_) {
+                    toggleInterest(interest);
+                  },
+                );
+              }).toList(),
+            ),
+
+            const Spacer(),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: saveInterests,
+                child: const Text('Save Interests'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+2. Add Route in app_router.dart
+
+Import:
+
+import '../../features/profile/presentation/screens/edit_interests_screen.dart';
+
+Add route:
+
+GoRoute(
+  path: '/edit-interests',
+  builder: (context, state) =>
+      const EditInterestsScreen(),
+),
+
+Inside your ShellRoute routes.
+
+3. Add Button in Profile Screen
+
+Inside profile_screen.dart:
+
+ElevatedButton.icon(
+  onPressed: () {
+    context.push('/edit-interests');
+  },
+  icon: const Icon(Icons.edit),
+  label: const Text('Edit Interests'),
+),
+
+4. Display Current Interests in Profile Screen
+
+Add this widget:
+
+FutureBuilder<SharedPreferences>(
+  future: SharedPreferences.getInstance(),
+  builder: (context, snapshot) {
+
+    if (!snapshot.hasData) {
+      return const CircularProgressIndicator();
+    }
+
+    final interests =
+        snapshot.data!
+            .getStringList('user_interests') ?? [];
+
+    return Wrap(
+      spacing: 8,
+      children: interests.map((interest) {
+        return Chip(
+          label: Text(interest),
+        );
+      }).toList(),
+    );
+  },
+),
+5. How This Works
+
+Flow:
+
+Profile Screen
+   ↓
+Edit Interests
+   ↓
+Select Chips
+   ↓
+Saved in SharedPreferences
+   ↓
+Recommendation Engine reads interests
+   ↓
+Personalized events update
