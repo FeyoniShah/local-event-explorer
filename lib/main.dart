@@ -5,7 +5,7 @@
 // import 'core/theme/app_theme.dart';
 // import 'routing/app_router.dart';
 // import 'firebase_options.dart';
-// import 'features/notifications/data/notification_service.dart';
+ //import 'features/notifications/data/notification_service.dart';
 
 // void main() async {
 //   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +56,7 @@ import 'core/theme/app_theme.dart';
 import 'routing/app_router.dart';
 import 'firebase_options.dart';
 import 'features/events/presentation/providers/theme_provider.dart';
+import 'features/notifications/data/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +64,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificationService().initialize();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

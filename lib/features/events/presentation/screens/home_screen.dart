@@ -6,6 +6,7 @@ import '../providers/events_provider.dart';
 import '../providers/saved_events_provider.dart';
 import '../widgets/event_card.dart';
 import '../widgets/category_chip.dart';
+import '../providers/rsvp_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +45,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Watch recommended events — AI sorted
     final eventsAsync = ref.watch(eventsProvider);
     final savedEvents = ref.watch(savedEventsProvider);
+    final rsvpState = ref.watch(rsvpProvider);
+    final expiringEvents = rsvpState.expiringSoon;
     //final filtered = _filterByCategory(recommended);
 
     return Scaffold(
@@ -64,7 +67,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () {
+              if (expiringEvents.isEmpty) {
+                showDialog(
+                  context: context,
+                  builder: (_) => const AlertDialog(
+                    title: Text('No Notifications'),
+                    content: Text('No RSVP events are expiring soon.'),
+                  ),
+                );
+              } else {
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Upcoming RSVP Reminders'),
+                      content: SizedBox(
+                        width: double.maxFinite,
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: expiringEvents.map((event) {
+                            return ListTile(
+                              leading: const Icon(Icons.notifications_active),
+                              title: Text(event.title),
+                              subtitle: Text(
+                                'Event is within 1 day\n${event.venue}',
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),

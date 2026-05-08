@@ -56,7 +56,7 @@ class NotificationService {
             android: AndroidNotificationDetails(
               'event_reminders',
               'Event Reminders',
-              channelDescription: '1 hour before event reminders',
+              channelDescription: '1 day before event reminders',
               importance: Importance.high,
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
@@ -70,10 +70,10 @@ class NotificationService {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
-  // Schedule a local notification 1 hour before an event
+  // Schedule a local notification 1 day before an event
   Future<void> scheduleEventReminder(EventModel event) async {
     final reminderTime =
-        event.dateTime.subtract(const Duration(hours: 1));
+    event.dateTime.subtract(const Duration(days: 1));
 
     // Don't schedule if reminder time is in the past
     if (reminderTime.isBefore(DateTime.now())) return;
@@ -82,7 +82,7 @@ class NotificationService {
 
     await _localNotifications.zonedSchedule(
       event.id.hashCode,
-      '🎉 ${event.title} starts in 1 hour!',
+      '🎉 Reminder: ${event.title} is tomorrow!',
       '📍 ${event.venue} — don\'t be late!',
       tzReminderTime,
       const NotificationDetails(

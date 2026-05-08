@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../routing/app_router.dart';
 import '../../../events/presentation/providers/saved_events_provider.dart';
 import '../../../events/presentation/providers/theme_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -83,6 +84,18 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
+
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.favorite),
+              title: const Text('Edit Interests'),
+              subtitle: const Text('Update your preferred event categories'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                context.push('/interest-picker');
+              },
+            ),
+          ),
           // ── Interests from Firestore ───────────────────────
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
@@ -301,21 +314,28 @@ class ProfileScreen extends ConsumerWidget {
             onTap: () {
               showDialog(
                 context: context,
-                builder: (_) => AlertDialog(
+                builder: (dialogContext) => AlertDialog(
                   title: const Text('Log Out'),
                   content: const Text('Are you sure you want to log out?'),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                       child: const Text('Cancel'),
                     ),
                     TextButton(
                       onPressed: () async {
-                        Navigator.pop(context);
+                        Navigator.of(dialogContext).pop();
+
                         await FirebaseAuth.instance.signOut();
-                        if (context.mounted) context.go(AppRoutes.login);
+
+                        if (context.mounted) {
+                          context.go(AppRoutes.login);
+                        }
                       },
-                      child: const Text('Log Out', style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        'Log Out',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ],
                 ),

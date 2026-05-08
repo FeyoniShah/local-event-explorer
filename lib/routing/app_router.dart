@@ -177,6 +177,7 @@ import '../features/map/presentation/screens/map_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../shared/widgets/main_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -257,34 +258,42 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
     ],
-    redirect: (context, state) async {
-      final isLoading = authState.isLoading;
-      if (isLoading) return null;
+      redirect: (context, state) async {
+        if (authState.isLoading) return null;
 
-      final isLoggedIn = authState.valueOrNull != null;
-      final loc = state.matchedLocation;
+        final user = authState.valueOrNull;
+        final isLoggedIn = user != null;
+        final loc = state.matchedLocation;
 
-      const publicRoutes = [
-        AppRoutes.splash,
-        AppRoutes.onboarding,
-        AppRoutes.login,
-        AppRoutes.interestPicker,
-      ];
-      final isPublic = publicRoutes.contains(loc);
+        const publicRoutes = [
+          AppRoutes.splash,
+          AppRoutes.onboarding,
+          AppRoutes.login,
+        ];
 
-      // Not logged in trying to access protected route
-      if (!isLoggedIn && !isPublic) return AppRoutes.login;
+        final isPublic = publicRoutes.contains(loc);
 
-      // Logged in trying to access login — check onboarding first
-      if (isLoggedIn && loc == AppRoutes.login) {
-        final prefs = await SharedPreferences.getInstance();
-        final onboardingDone = prefs.getBool('onboarding_complete') ?? false;
-        if (!onboardingDone) return AppRoutes.interestPicker;
-        return AppRoutes.home;
-      }
+        if (!isLoggedIn && !isPublic) {
+          return AppRoutes.login;
+        }
 
-      return null;
-    },
+        if (isLoggedIn && loc == AppRoutes.login) {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          final interests = doc.data()?['interests'] as List?;
+
+          if (interests == null || interests.isEmpty) {
+            return AppRoutes.interestPicker;
+          }
+
+          return AppRoutes.home;
+        }
+
+        return null;
+      },
   );
 });
 
