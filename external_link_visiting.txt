@@ -1,0 +1,1058 @@
+Yes — that’s actually a very realistic UX pattern used in event/ticketing apps 🌷
+
+Since your app probably redirects users to:
+
+* BookMyShow
+* Eventbrite
+* Meetup
+* external booking pages
+
+your app cannot directly know if booking succeeded unless you own the payment system.
+
+So the standard industry approach is:
+
+```text id="jlwmel"
+User clicks booking link
+   ↓
+External website opens
+   ↓
+User comes back to app
+   ↓
+App asks:
+"Did you complete your booking?"
+   ↓
+If YES:
+Add event to Registered Events
+Schedule reminder
+Show success state
+```
+
+This is the cleanest solution for your architecture.
+
+---
+
+# Recommended UX Flow
+
+## Step 1 — User clicks Register
+
+```text id="k7d9q2"
+Register Now
+```
+
+opens external booking URL.
+
+Example:
+
+```dart id="vl8j1o"
+launchUrl(Uri.parse(event.bookingUrl));
+```
+
+---
+
+# Step 2 — Detect App Resume
+
+When user returns to app:
+
+```text id="czv9mv"
+App resumed from background
+```
+
+show confirmation dialog.
+
+Flutter uses:
+
+```dart id="f4k4nl"
+WidgetsBindingObserver
+```
+
+for this.
+
+---
+
+# Step 3 — Confirmation Dialog
+
+Show:
+
+```text id="2v9l8t"
+Did you complete your booking for Tech Summit 2026?
+```
+
+Buttons:
+
+* Yes
+* Not Yet
+
+---
+
+# Step 4 — If YES
+
+Then:
+✅ add to registered events
+✅ save locally / Firestore
+✅ schedule notification reminder
+✅ update UI
+
+---
+
+# Recommended Data Structure
+
+```json id="q3bx0v"
+registered_events: [
+   {
+      "eventId": "abc123",
+      "registeredAt": "2026-05-08",
+      "status": "confirmed"
+   }
+]
+```
+
+---
+
+# PROFESSIONAL IMPLEMENTATION 🌷
+
+# 1. Create Registered Events Storage
+
+Example using SharedPreferences.
+
+---
+
+# 2. Booking Service
+
+Create:
+
+```text id="4g5rj5"
+booking_service.dart
+```
+
+---
+
+Code:
+
+```dart id="e1o3ci"
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+class BookingService {
+
+  static Future<void> registerEvent(
+    String eventId,
+  ) async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final registered =
+        prefs.getStringList('registered_events') ?? [];
+
+    if (!registered.contains(eventId)) {
+      registered.add(eventId);
+
+      await prefs.setStringList(
+        'registered_events',
+        registered,
+      );
+    }
+  }
+
+  static Future<List<String>>
+      getRegisteredEvents() async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    return prefs.getStringList(
+          'registered_events',
+        ) ??
+        [];
+  }
+}
+```
+
+---
+
+# 3. Detect Return From Booking Website
+
+Inside Event Details Screen:
+
+```dart id="dlnc35"
+class EventDetailsScreen extends StatefulWidget {
+```
+
+Add:
+
+```dart id="jlwm0v"
+class _EventDetailsScreenState
+    extends State<EventDetailsScreen>
+    with WidgetsBindingObserver {
+
+  bool openedBookingLink = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+      AppLifecycleState state) {
+
+    if (state == AppLifecycleState.resumed &&
+        openedBookingLink) {
+
+      showBookingConfirmationDialog();
+    }
+  }
+```
+
+---
+
+# 4. Open Booking Link
+
+```dart id="st5y5d"
+Future<void> openBookingLink() async {
+
+  openedBookingLink = true;
+
+  await launchUrl(
+    Uri.parse(widget.event.bookingUrl),
+    mode: LaunchMode.externalApplication,
+  );
+}
+```
+
+---
+
+# 5. Confirmation Dialog
+
+```dart id="fw5d97"
+Future<void>
+    showBookingConfirmationDialog() async {
+
+  final confirmed =
+      await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Booking Confirmation',
+        ),
+        content: Text(
+          'Did you complete booking for '
+          '${widget.event.title}?',
+        ),
+        actions: [
+
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text('Not Yet'),
+          ),
+
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text('Yes'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed == true) {
+
+    await BookingService.registerEvent(
+      widget.event.id,
+    );
+
+    if (mounted) {
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content:
+              Text('Event added to Registered Events'),
+        ),
+      );
+    }
+  }
+
+  openedBookingLink = false;
+}
+```
+
+---
+
+# 6. Registered Events Screen
+
+Create:
+
+```text id="44m0lm"
+registered_events_screen.dart
+```
+
+Then show saved events.
+
+---
+
+Basic Logic:
+
+```dart id="a7jznd"
+final registeredIds =
+    await BookingService.getRegisteredEvents();
+```
+
+Filter events list:
+
+```dart id="e2jzjr"
+allEvents.where(
+   (e) => registeredIds.contains(e.id),
+)
+```
+
+Display them in cards/list.
+
+---
+
+# UX Improvements You SHOULD Add 🌷
+
+## Add Status Chip
+
+Example:
+
+```text id="n8d4ec"
+✓ Registered
+```
+
+on event cards.
+
+---
+
+# Add Reminder Automatically
+
+After confirmation:
+
+```dart id="5e7sul"
+NotificationService.instance
+   .scheduleEventReminder(event);
+```
+
+Very professional feature.
+
+---
+
+# Add Calendar Sync Later
+
+Future enhancement:
+
+* Google Calendar integration
+* Apple Calendar integration
+
+---
+
+# Industry-Level Explanation
+
+If interviewer asks:
+
+> “How do you handle external booking confirmation?”
+
+You can say:
+
+> Since bookings occur on third-party platforms, the app uses lifecycle state detection to identify when users return from the external booking flow. A confirmation dialog verifies booking completion before persisting the event into the registered-events system and scheduling reminders.
+
+That sounds VERY strong technically ✨
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+```dart
+// ================================
+// booking_service.dart
+// Path:
+// lib/features/events/services/booking_service.dart
+// ================================
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+class BookingService {
+
+  static const String registeredEventsKey =
+      'registered_events';
+
+  static Future<void> registerEvent(
+    String eventId,
+  ) async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final registeredEvents =
+        prefs.getStringList(
+              registeredEventsKey,
+            ) ??
+            [];
+
+    if (!registeredEvents.contains(eventId)) {
+
+      registeredEvents.add(eventId);
+
+      await prefs.setStringList(
+        registeredEventsKey,
+        registeredEvents,
+      );
+    }
+  }
+
+  static Future<List<String>>
+      getRegisteredEvents() async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    return prefs.getStringList(
+          registeredEventsKey,
+        ) ??
+        [];
+  }
+
+  static Future<bool> isRegistered(
+    String eventId,
+  ) async {
+
+    final prefs =
+        await SharedPreferences.getInstance();
+
+    final registeredEvents =
+        prefs.getStringList(
+              registeredEventsKey,
+            ) ??
+            [];
+
+    return registeredEvents.contains(eventId);
+  }
+}
+```
+
+---
+
+```dart
+// =======================================
+// event_details_screen.dart
+// Replace your existing screen code
+// =======================================
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../services/booking_service.dart';
+
+class EventDetailsScreen extends StatefulWidget {
+
+  final dynamic event;
+
+  const EventDetailsScreen({
+    super.key,
+    required this.event,
+  });
+
+  @override
+  State<EventDetailsScreen> createState() =>
+      _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState
+    extends State<EventDetailsScreen>
+    with WidgetsBindingObserver {
+
+  bool openedBookingLink = false;
+
+  bool isRegistered = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    checkRegistrationStatus();
+  }
+
+  Future<void>
+      checkRegistrationStatus() async {
+
+    final registered =
+        await BookingService.isRegistered(
+      widget.event.id,
+    );
+
+    setState(() {
+      isRegistered = registered;
+    });
+  }
+
+  @override
+  void dispose() {
+
+    WidgetsBinding.instance.removeObserver(this);
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+      AppLifecycleState state) {
+
+    if (state == AppLifecycleState.resumed &&
+        openedBookingLink) {
+
+      showBookingConfirmationDialog();
+    }
+  }
+
+  Future<void> openBookingLink() async {
+
+    openedBookingLink = true;
+
+    final Uri url =
+        Uri.parse(widget.event.bookingUrl);
+
+    await launchUrl(
+      url,
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void>
+      showBookingConfirmationDialog() async {
+
+    final bool? confirmed =
+        await showDialog<bool>(
+
+      context: context,
+
+      builder: (context) {
+
+        return AlertDialog(
+
+          title: const Text(
+            'Booking Confirmation',
+          ),
+
+          content: Text(
+            'Did you complete booking for '
+            '${widget.event.title}?',
+          ),
+
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Not Yet'),
+            ),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+
+      await BookingService.registerEvent(
+        widget.event.id,
+      );
+
+      setState(() {
+        isRegistered = true;
+      });
+
+      if (mounted) {
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+
+          const SnackBar(
+            content: Text(
+              'Event added to Registered Events',
+            ),
+          ),
+        );
+      }
+    }
+
+    openedBookingLink = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+
+      appBar: AppBar(
+        title: Text(widget.event.title),
+      ),
+
+      body: SingleChildScrollView(
+
+        padding: const EdgeInsets.all(16),
+
+        child: Column(
+
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+
+          children: [
+
+            // Event Image
+            ClipRRect(
+              borderRadius:
+                  BorderRadius.circular(16),
+              child: Image.network(
+                widget.event.imageUrl,
+                height: 220,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Event Title
+            Text(
+              widget.event.title,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Category
+            Chip(
+              label: Text(widget.event.category),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Description
+            Text(
+              widget.event.description,
+              style: const TextStyle(
+                fontSize: 16,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Venue
+            Row(
+              children: [
+                const Icon(Icons.location_on),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(widget.event.venue),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Date
+            Row(
+              children: [
+                const Icon(Icons.calendar_month),
+                const SizedBox(width: 8),
+                Text(
+                  widget.event.dateTime
+                      .toString(),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 30),
+
+            // Registration Status
+            if (isRegistered)
+              Container(
+
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+
+                decoration: BoxDecoration(
+                  color: Colors.green
+                      .withOpacity(0.15),
+
+                  borderRadius:
+                      BorderRadius.circular(14),
+                ),
+
+                child: const Row(
+                  children: [
+
+                    Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                    ),
+
+                    SizedBox(width: 10),
+
+                    Text(
+                      'Registered Successfully',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight:
+                            FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // Register Button
+            SizedBox(
+
+              width: double.infinity,
+
+              height: 56,
+
+              child: ElevatedButton(
+
+                onPressed: isRegistered
+                    ? null
+                    : openBookingLink,
+
+                child: Text(
+                  isRegistered
+                      ? 'Already Registered'
+                      : 'Register Now',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+```dart
+// ====================================
+// registered_events_screen.dart
+// Path:
+// lib/features/profile/presentation/screens/registered_events_screen.dart
+// ====================================
+
+import 'package:flutter/material.dart';
+
+import '../../../events/data/dummy_events.dart';
+import '../../../events/services/booking_service.dart';
+
+class RegisteredEventsScreen
+    extends StatefulWidget {
+
+  const RegisteredEventsScreen({
+    super.key,
+  });
+
+  @override
+  State<RegisteredEventsScreen> createState() =>
+      _RegisteredEventsScreenState();
+}
+
+class _RegisteredEventsScreenState
+    extends State<RegisteredEventsScreen> {
+
+  List<dynamic> registeredEvents = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadRegisteredEvents();
+  }
+
+  Future<void>
+      loadRegisteredEvents() async {
+
+    final registeredIds =
+        await BookingService
+            .getRegisteredEvents();
+
+    final events = dummyEvents.where(
+      (event) {
+        return registeredIds.contains(
+          event.id,
+        );
+      },
+    ).toList();
+
+    setState(() {
+      registeredEvents = events;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+
+      appBar: AppBar(
+        title: const Text(
+          'Registered Events',
+        ),
+      ),
+
+      body: registeredEvents.isEmpty
+
+          ? const Center(
+              child: Text(
+                'No Registered Events Yet',
+              ),
+            )
+
+          : ListView.builder(
+
+              padding:
+                  const EdgeInsets.all(16),
+
+              itemCount:
+                  registeredEvents.length,
+
+              itemBuilder: (context, index) {
+
+                final event =
+                    registeredEvents[index];
+
+                return Card(
+
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 16,
+                  ),
+
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(
+                      16,
+                    ),
+                  ),
+
+                  child: Padding(
+
+                    padding:
+                        const EdgeInsets.all(16),
+
+                    child: Column(
+
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+
+                      children: [
+
+                        Text(
+                          event.title,
+                          style:
+                              const TextStyle(
+                            fontSize: 20,
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+
+                        const SizedBox(
+                          height: 10,
+                        ),
+
+                        Text(
+                          event.description,
+                        ),
+
+                        const SizedBox(
+                          height: 16,
+                        ),
+
+                        Row(
+                          children: [
+
+                            const Icon(
+                              Icons
+                                  .location_on,
+                            ),
+
+                            const SizedBox(
+                              width: 8,
+                            ),
+
+                            Expanded(
+                              child: Text(
+                                event.venue,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(
+                          height: 12,
+                        ),
+
+                        Container(
+
+                          padding:
+                              const EdgeInsets
+                                  .symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+
+                          decoration:
+                              BoxDecoration(
+
+                            color: Colors.green
+                                .withOpacity(
+                                    0.15),
+
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              12,
+                            ),
+                          ),
+
+                          child: const Text(
+                            '✓ Registered',
+                            style: TextStyle(
+                              color:
+                                  Colors.green,
+                              fontWeight:
+                                  FontWeight
+                                      .bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+```
+
+---
+
+# ADD ROUTE
+
+Inside `app_router.dart`
+
+Import:
+
+```dart
+import '../../features/profile/presentation/screens/registered_events_screen.dart';
+```
+
+Add:
+
+```dart
+GoRoute(
+  path: '/registered-events',
+  builder: (context, state) =>
+      const RegisteredEventsScreen(),
+),
+```
+
+---
+
+# ADD BUTTON IN PROFILE SCREEN
+
+```dart
+ElevatedButton.icon(
+  onPressed: () {
+    context.push('/registered-events');
+  },
+  icon: const Icon(Icons.event_available),
+  label: const Text('Registered Events'),
+),
+```
+
+---
+
+# REQUIRED PACKAGE
+
+Add in `pubspec.yaml`
+
+```yaml
+dependencies:
+  url_launcher: ^6.3.0
+```
+
+Then run:
+
+```bash
+flutter pub get
+```
+
+---
+
+# FINAL FLOW 🌷
+
+```text
+User opens event
+    ↓
+Clicks Register Now
+    ↓
+External booking website opens
+    ↓
+User returns to app
+    ↓
+Confirmation dialog appears
+    ↓
+If YES:
+    • event saved
+    • registered badge shown
+    • appears in Registered Events
+```
