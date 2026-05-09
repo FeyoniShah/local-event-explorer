@@ -5,7 +5,7 @@ import 'event_model.dart';
 
 class EventRepository {
   static const String _rapidApiKey =
-      '7b0e25b9f5msh90f259f408094c2p19a4bfjsnd2676afa04b2';
+      'eb5dd0d4d7msh3387a03f8b09034p1caffcjsn3043755822dc';
   static const String _rapidApiHost = 'real-time-events-search.p.rapidapi.com';
 
   static const Map<String, List<double>> _cityCoords = {

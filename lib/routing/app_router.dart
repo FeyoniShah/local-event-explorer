@@ -175,6 +175,7 @@ import '../features/events/presentation/screens/event_detail_screen.dart';
 import '../features/events/presentation/screens/search_screen.dart';
 import '../features/map/presentation/screens/map_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
+import '../features/profile/presentation/screens/edit_interests_screen.dart'; // ← NEW
 import '../shared/widgets/main_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -190,9 +191,9 @@ class AppRoutes {
   static const profile = '/profile';
   static const savedEvents = '/saved';
   static const chatPlaceholder = '/chat/:eventId';
+  static const editInterests = '/edit-interests'; // ← NEW
 }
 
-// Stream provider for Firebase auth state
 final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
 });
@@ -220,6 +221,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.interestPicker,
         builder: (context, state) => const InterestPickerScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.editInterests, // ← NEW
+        builder: (context, state) => const EditInterestsScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
@@ -272,10 +277,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ];
       final isPublic = publicRoutes.contains(loc);
 
-      // Not logged in trying to access protected route
       if (!isLoggedIn && !isPublic) return AppRoutes.login;
 
-      // Logged in trying to access login — check onboarding first
       if (isLoggedIn && loc == AppRoutes.login) {
         final prefs = await SharedPreferences.getInstance();
         final onboardingDone = prefs.getBool('onboarding_complete') ?? false;

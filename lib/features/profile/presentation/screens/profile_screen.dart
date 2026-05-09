@@ -1,34 +1,55 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../routing/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../events/data/event_model.dart';
 import '../../../events/presentation/providers/saved_events_provider.dart';
-import '../../../events/presentation/providers/theme_provider.dart';
+import '../../../events/presentation/providers/rsvp_provider.dart';
+import '../../../events/presentation/providers/theme_provider.dart'; // ← theme toggle
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('onboarding_complete');
+    await FirebaseAuth.instance.signOut();
+    if (context.mounted) context.go('/login');
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = FirebaseAuth.instance.currentUser;
-    final savedEvents = ref.watch(savedEventsProvider);
-    final isDark = ref.watch(themeModeProvider);
+    final isDark = ref.watch(themeModeProvider); // ← theme state
 
-    final displayName = (user?.displayName?.isNotEmpty == true)
-        ? user!.displayName!
-        : (user?.email?.split('@').first ?? 'Guest');
-    final email = user?.email ?? 'guest@local.app';
-    final photoUrl = user?.photoURL;
+    // Saved events — split into upcoming vs past
+    final savedAll = ref.watch(savedEventsProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final savedUpcoming = savedAll.where((e) => !e.dateTime.isBefore(today)).toList()
+      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    final savedPast = savedAll.where((e) => e.dateTime.isBefore(today)).toList()
+      ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
+
+    // RSVP state
+    final rsvpState = ref.watch(rsvpProvider);
+    final rsvpdIds = {
+      ...rsvpState.rsvpd.map((e) => e.id),
+      ...rsvpState.past.map((e) => e.id),
+    };
+    final savedOnlyPast = savedPast.where((e) => !rsvpdIds.contains(e.id)).toList();
 
     return Scaffold(
+      backgroundColor: AppColors.backgroundDark,
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('Profile', style: AppTextStyles.headlineMedium),
+        backgroundColor: AppColors.backgroundDark,
         actions: [
-          // ── Theme Toggle ──────────────────────────────────
+          // ── Dark / Light toggle ──────────────────────────
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -37,10 +58,10 @@ class ProfileScreen extends ConsumerWidget {
                   size: 18,
                   color: isDark ? Colors.amber : AppColors.primary,
                 ),
-                const SizedBox(width: 4),
                 Switch.adaptive(
                   value: isDark,
-                  onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
+                  onChanged: (_) =>
+                      ref.read(themeModeProvider.notifier).toggle(),
                   activeColor: Colors.amber,
                   inactiveThumbColor: AppColors.primary,
                   inactiveTrackColor: AppColors.primary.withOpacity(0.3),
@@ -48,288 +69,336 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+          // ── Logout icon ──────────────────────────────────
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppColors.textPrimary),
+            tooltip: 'Logout',
+            onPressed: () => _logout(context, ref),
+          ),
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
 
-          // ── Avatar + name ──────────────────────────────────
+          // ── Avatar + name ──────────────────────────────────────────────
           Center(
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 48,
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  backgroundImage:
-                      photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: photoUrl == null
+                  radius: 40,
+                  backgroundColor: AppColors.primary,
+                  backgroundImage: user?.photoURL != null
+                      ? NetworkImage(user!.photoURL!)
+                      : null,
+                  child: user?.photoURL == null
                       ? Text(
-                          displayName[0].toUpperCase(),
+                          _initials(user),
                           style: const TextStyle(
-                              fontSize: 36,
+                              fontSize: 28,
                               color: Colors.white,
                               fontWeight: FontWeight.bold),
                         )
                       : null,
                 ),
                 const SizedBox(height: 12),
-                Text(displayName,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold)),
-                Text(email, style: const TextStyle(color: Colors.grey)),
+                Text(
+                  user?.displayName ?? user?.email?.split('@').first ?? 'Guest',
+                  style: AppTextStyles.headlineMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(user?.email ?? 'Anonymous', style: AppTextStyles.bodyMedium),
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // ── Interests from Firestore ───────────────────────
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Text('My Interests',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          // ── Stats row ──────────────────────────────────────────────────
+          Row(
+            children: [
+              _StatCard(
+                label: 'Going',
+                count: rsvpState.rsvpd.length,
+                icon: Icons.event_available,
+                color: Colors.green,
+              ),
+              const SizedBox(width: 12),
+              _StatCard(
+                label: 'Saved',
+                count: savedUpcoming.length,
+                icon: Icons.bookmark,
+                color: Colors.amber,
+              ),
+              const SizedBox(width: 12),
+              _StatCard(
+                label: 'Attended',
+                count: rsvpState.past.length,
+                icon: Icons.check_circle,
+                color: Colors.blue,
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          // ── GOING section ──────────────────────────────────────────────
+          _SectionHeader(
+            icon: Icons.event_available,
+            iconColor: Colors.green,
+            title: 'Going',
+            subtitle: '${rsvpState.rsvpd.length} upcoming',
           ),
           const SizedBox(height: 8),
-          FutureBuilder<DocumentSnapshot>(
-            future: user != null
-                ? FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(user.uid)
-                    .get()
-                : null,
-            builder: (context, snapshot) {
-              List<String> interests = [];
-              if (snapshot.hasData && snapshot.data!.exists) {
-                final data = snapshot.data!.data() as Map<String, dynamic>?;
-                interests = List<String>.from(data?['interests'] ?? []);
-              }
-              if (interests.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('No interests selected yet',
-                      style: TextStyle(color: Colors.grey)),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: interests.map((i) => Chip(label: Text(i))).toList(),
-                ),
-              );
-            },
+          if (rsvpState.rsvpd.isEmpty)
+            const _EmptyState(
+              icon: Icons.event_available_outlined,
+              message: "No upcoming RSVPs yet.\nTap \"I'm Going!\" on any event page.",
+            )
+          else
+            ...rsvpState.rsvpd.map((e) => _EventTile(
+                  event: e,
+                  trailing: _dateChip(e.dateTime, Colors.green),
+                  onTap: () => context.push('/event/${e.id}'),
+                )),
+          const SizedBox(height: 28),
+
+          // ── SAVED section ──────────────────────────────────────────────
+          _SectionHeader(
+            icon: Icons.bookmark,
+            iconColor: Colors.amber,
+            title: 'Saved Events',
+            subtitle: '${savedUpcoming.length} upcoming',
           ),
+          const SizedBox(height: 8),
+          if (savedUpcoming.isEmpty)
+            const _EmptyState(
+              icon: Icons.bookmark_outline,
+              message: 'No saved events.\nTap the bookmark icon on any event to save it.',
+            )
+          else
+            ...savedUpcoming.map((e) => _EventTile(
+                  event: e,
+                  trailing: _dateChip(e.dateTime, Colors.amber),
+                  onTap: () => context.push('/event/${e.id}'),
+                )),
+          const SizedBox(height: 28),
 
-          const SizedBox(height: 24),
-          const Divider(),
+          // ── PAST EVENTS section ────────────────────────────────────────
+          if (rsvpState.past.isNotEmpty || savedOnlyPast.isNotEmpty) ...[
+            _SectionHeader(
+              icon: Icons.history,
+              iconColor: Colors.grey,
+              title: 'Past Events',
+              subtitle: '${rsvpState.past.length + savedOnlyPast.length} events',
+            ),
+            const SizedBox(height: 8),
+            ...rsvpState.past.map((e) => _EventTile(
+                  event: e,
+                  trailing: _badge('Attended', Colors.green),
+                  muted: true,
+                  onTap: () => context.push('/event/${e.id}'),
+                )),
+            ...savedOnlyPast.map((e) => _EventTile(
+                  event: e,
+                  trailing: _badge('Saved', Colors.grey),
+                  muted: true,
+                  onTap: () => context.push('/event/${e.id}'),
+                )),
+            const SizedBox(height: 28),
+          ],
 
-          // ── Saved Events ───────────────────────────────────
-          ListTile(
-            leading: const Icon(Icons.bookmark_outline),
-            title: Text('Saved Events (${savedEvents.length})'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20))),
-                builder: (_) => DraggableScrollableSheet(
-                  initialChildSize: 0.6,
-                  maxChildSize: 0.9,
-                  minChildSize: 0.4,
-                  expand: false,
-                  builder: (_, controller) => Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Container(
-                        width: 40, height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Saved Events',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: savedEvents.isEmpty
-                            ? const Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.bookmark_border, size: 60, color: Colors.grey),
-                                    SizedBox(height: 12),
-                                    Text('No saved events yet!',
-                                        style: TextStyle(color: Colors.grey, fontSize: 16)),
-                                    SizedBox(height: 4),
-                                    Text('Save events to see them here',
-                                        style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                  ],
-                                ),
-                              )
-                            : ListView.builder(
-                                controller: controller,
-                                itemCount: savedEvents.length,
-                                itemBuilder: (context, index) {
-                                  final event = savedEvents[index];
-                                  return ListTile(
-                                    leading: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        event.imageUrl,
-                                        width: 50, height: 50, fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          width: 50, height: 50,
-                                          color: Colors.grey[800],
-                                          child: const Icon(Icons.image),
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(event.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    subtitle: Text(event.venue, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                    trailing: Icon(Icons.bookmark, color: Theme.of(context).colorScheme.primary),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      context.push('/event/${event.id}');
-                                    },
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          // ── Logout button ──────────────────────────────────────────────
+          OutlinedButton.icon(
+            onPressed: () => _logout(context, ref),
+            icon: const Icon(Icons.logout),
+            label: const Text('Logout'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              foregroundColor: AppColors.error,
+              side: const BorderSide(color: AppColors.error),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
 
-          // ── Past Events ────────────────────────────────────
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Past Events'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                builder: (_) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.history, size: 48, color: Colors.grey),
-                      const SizedBox(height: 12),
-                      const Text('Past Events',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      const Text('Events you attended will appear here!',
-                          style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+  String _initials(User? user) {
+    final name = user?.displayName ?? user?.email ?? 'G';
+    final parts = name.split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name[0].toUpperCase();
+  }
 
-          // ── Settings ───────────────────────────────────────
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('Settings'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                builder: (_) => Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Settings',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
-                      SwitchListTile(
-                        title: const Text('Push Notifications'),
-                        subtitle: const Text('Get event reminders'),
-                        value: true,
-                        onChanged: (_) {},
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      SwitchListTile(
-                        title: const Text('Location Access'),
-                        subtitle: const Text('Find events near you'),
-                        value: true,
-                        onChanged: (_) {},
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Done'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+  Widget _dateChip(DateTime dt, Color color) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        '${dt.day} ${months[dt.month - 1]}',
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
 
-          const Divider(),
+  Widget _badge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
 
-          // ── Logout ─────────────────────────────────────────
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Log Out', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text('Log Out'),
-                  content: const Text('Are you sure you want to log out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        Navigator.pop(context);
-                        await FirebaseAuth.instance.signOut();
-                        if (context.mounted) context.go(AppRoutes.login);
-                      },
-                      child: const Text('Log Out', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 32),
+// ── Sub-widgets ──────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+
+  const _SectionHeader({
+    required this.icon, required this.iconColor,
+    required this.title, required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: iconColor, size: 20),
+        const SizedBox(width: 8),
+        Text(title, style: const TextStyle(
+            fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        const Spacer(),
+        Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final int count;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.label, required this.count,
+    required this.icon, required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.25)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text('$count',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+            const SizedBox(height: 2),
+            Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _EmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundCard,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 36, color: AppColors.textTertiary),
+          const SizedBox(height: 10),
+          Text(message,
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+              textAlign: TextAlign.center),
         ],
       ),
     );
   }
 }
 
-// Re-export AppColors so profile_screen can use it directly
-class AppColors {
-  static const primary = Color(0xFF6C63FF);
+class _EventTile extends StatelessWidget {
+  final EventModel event;
+  final Widget trailing;
+  final VoidCallback onTap;
+  final bool muted;
+
+  const _EventTile({
+    required this.event, required this.trailing,
+    required this.onTap, this.muted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: muted ? 0.65 : 1.0,
+      child: Card(
+        color: AppColors.backgroundCard,
+        margin: const EdgeInsets.only(bottom: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          onTap: onTap,
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              event.imageUrl,
+              width: 52, height: 52, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                width: 52, height: 52,
+                color: Colors.grey[800],
+                child: const Icon(Icons.event, color: Colors.white54, size: 24),
+              ),
+            ),
+          ),
+          title: Text(event.title,
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text('📍 ${event.city}',
+              style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+          trailing: trailing,
+        ),
+      ),
+    );
+  }
 }

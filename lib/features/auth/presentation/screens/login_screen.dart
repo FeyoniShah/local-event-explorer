@@ -1,190 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:go_router/go_router.dart';
-// import '../../../../core/theme/app_theme.dart';
-
-// class LoginScreen extends StatelessWidget {
-//   const LoginScreen({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       backgroundColor: AppColors.backgroundDark,
-//       body: SafeArea(
-//         child: Padding(
-//           padding: const EdgeInsets.symmetric(horizontal: 24),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               const SizedBox(height: 48),
-
-//               // Header icon
-//               Container(
-//                 width: 64,
-//                 height: 64,
-//                 decoration: BoxDecoration(
-//                   gradient: const LinearGradient(
-//                     colors: [AppColors.primary, AppColors.accent],
-//                     begin: Alignment.topLeft,
-//                     end: Alignment.bottomRight,
-//                   ),
-//                   borderRadius: BorderRadius.circular(18),
-//                 ),
-//                 child: const Icon(
-//                   Icons.location_on_rounded,
-//                   color: Colors.white,
-//                   size: 36,
-//                 ),
-//               ),
-//               const SizedBox(height: 28),
-
-//               const Text('Welcome Back!', style: AppTextStyles.displayLarge),
-//               const SizedBox(height: 8),
-//               const Text(
-//                 'Sign in to discover local events',
-//                 style: AppTextStyles.bodyLarge,
-//               ),
-//               const SizedBox(height: 48),
-
-//               // ── Google button ────────────────────────────────────────────
-//               // Real Google Sign-In requires Firebase + a web OAuth client ID
-//               // in web/index.html. Since Firebase is not wired for web yet,
-//               // we navigate directly (demo / mobile-only mode).
-//               _SocialButton(
-//                 iconWidget: const Icon(Icons.g_mobiledata_rounded,
-//                     color: Colors.redAccent, size: 22),
-//                 label: 'Continue with Google',
-//                 onTap: () => context.go('/interest-picker'),
-//               ),
-//               const SizedBox(height: 16),
-
-//               _SocialButton(
-//                 iconWidget: const Icon(Icons.email_outlined,
-//                     color: AppColors.primary, size: 20),
-//                 label: 'Continue with Email',
-//                 onTap: () => _showEmailDialog(context),
-//               ),
-//               const SizedBox(height: 16),
-
-//               _SocialButton(
-//                 iconWidget: const Icon(Icons.phone_rounded,
-//                     color: AppColors.success, size: 20),
-//                 label: 'Continue with Phone',
-//                 onTap: () => context.go('/interest-picker'),
-//               ),
-
-//               const Spacer(),
-
-//               Center(
-//                 child: Text(
-//                   'By continuing you agree to our Terms & Privacy Policy',
-//                   style: AppTextStyles.labelSmall,
-//                   textAlign: TextAlign.center,
-//                 ),
-//               ),
-//               const SizedBox(height: 24),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   void _showEmailDialog(BuildContext context) {
-//     showDialog(
-//       context: context,
-//       builder: (ctx) => AlertDialog(
-//         backgroundColor: AppColors.backgroundCard,
-//         title: const Text('Sign In', style: AppTextStyles.headlineMedium),
-//         content: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             TextField(
-//               style: const TextStyle(
-//                   color: AppColors.textPrimary, fontFamily: 'Urbanist'),
-//               decoration: const InputDecoration(
-//                 hintText: 'Email address',
-//                 prefixIcon:
-//                     Icon(Icons.email_outlined, color: AppColors.textTertiary),
-//               ),
-//             ),
-//             const SizedBox(height: 12),
-//             TextField(
-//               obscureText: true,
-//               style: const TextStyle(
-//                   color: AppColors.textPrimary, fontFamily: 'Urbanist'),
-//               decoration: const InputDecoration(
-//                 hintText: 'Password',
-//                 prefixIcon:
-//                     Icon(Icons.lock_outline, color: AppColors.textTertiary),
-//               ),
-//             ),
-//           ],
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.pop(ctx),
-//             child: const Text('Cancel',
-//                 style: TextStyle(color: AppColors.textTertiary)),
-//           ),
-//           ElevatedButton(
-//             onPressed: () {
-//               Navigator.pop(ctx);
-//               // Navigate to interest-picker after "sign in"
-//               context.go('/interest-picker');
-//             },
-//             child: const Text('Sign In'),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class _SocialButton extends StatelessWidget {
-//   final Widget iconWidget;
-//   final String label;
-//   final VoidCallback onTap;
-
-//   const _SocialButton({
-//     required this.iconWidget,
-//     required this.label,
-//     required this.onTap,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return SizedBox(
-//       width: double.infinity,
-//       height: 56,
-//       child: OutlinedButton(
-//         onPressed: onTap,
-//         style: OutlinedButton.styleFrom(
-//           side: const BorderSide(color: AppColors.divider),
-//           shape:
-//               RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-//           backgroundColor: AppColors.backgroundCard,
-//         ),
-//         child: Row(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             iconWidget,
-//             const SizedBox(width: 12),
-//             Text(
-//               label,
-//               style: const TextStyle(
-//                 color: AppColors.textPrimary,
-//                 fontFamily: 'Urbanist',
-//                 fontWeight: FontWeight.w600,
-//                 fontSize: 15,
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -202,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
 
-  // Anonymous sign-in for Google/Phone demo buttons
   Future<void> _signInAnonymously() async {
     setState(() => _loading = true);
     try {
@@ -217,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Email sign-in or auto-create account
   Future<void> _signInWithEmail(String email, String password) async {
     if (email.isEmpty || password.isEmpty) {
       _showError('Enter email and password');
@@ -249,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Save user to Firestore on first login only
   Future<void> _ensureUserDoc(User user,
       {required String displayName, required String email}) async {
     final doc = FirebaseFirestore.instance.collection('users').doc(user.uid);
@@ -277,50 +87,64 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showEmailDialog() {
     final emailCtrl = TextEditingController();
     final passCtrl = TextEditingController();
+    final theme = Theme.of(context); // ← gets current light/dark theme
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.backgroundCard,
-        title: const Text('Sign In / Register',
-            style: AppTextStyles.headlineMedium),
+        // ── FIX 1: use theme surface color instead of hardcoded dark ──
+        backgroundColor: theme.colorScheme.surface,
+        title: Text('Sign In / Register',
+            style: theme.textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontFamily: 'Urbanist'),
-              decoration: const InputDecoration(
+              // ── FIX 2: text color follows theme automatically ──────
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontFamily: 'Urbanist',
+              ),
+              decoration: InputDecoration(
                 hintText: 'Email address',
-                prefixIcon:
-                    Icon(Icons.email_outlined, color: AppColors.textTertiary),
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.email_outlined,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: passCtrl,
               obscureText: true,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontFamily: 'Urbanist'),
-              decoration: const InputDecoration(
+              // ── FIX 3: same for password field ────────────────────
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontFamily: 'Urbanist',
+              ),
+              decoration: InputDecoration(
                 hintText: 'Password (min 6 chars)',
-                prefixIcon:
-                    Icon(Icons.lock_outline, color: AppColors.textTertiary),
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.lock_outline,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "New user? We'll create your account automatically.",
-              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurface.withOpacity(0.5)),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textTertiary)),
+            child: Text('Cancel',
+                style: TextStyle(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6))),
           ),
           ElevatedButton(
             onPressed: () {
@@ -428,8 +252,7 @@ class _SocialButton extends StatelessWidget {
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: AppColors.divider),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           backgroundColor: AppColors.backgroundCard,
         ),
         child: Row(

@@ -1,9 +1,8 @@
 // lib/core/services/notification_service.dart
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/data/latest.dart' as tz;
 import '../../features/events/data/event_model.dart';
 
 class NotificationService {
@@ -19,9 +18,8 @@ class NotificationService {
   // ── Initialize ─────────────────────────────────────────────────────────
   Future<void> init() async {
     if (_initialized) return;
-    if (kIsWeb) { _initialized = true; return; } // ← skip on web
 
-    tz_data.initializeTimeZones();
+    tz.initializeTimeZones();
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
@@ -39,7 +37,6 @@ class NotificationService {
 
   // ── Request permission ─────────────────────────────────────────────────
   Future<bool> requestPermission() async {
-    if (kIsWeb) return false; // ← skip on web
     final android = await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
@@ -55,7 +52,6 @@ class NotificationService {
 
   // ── Schedule notifications for ONE event ───────────────────────────────
   Future<void> scheduleEventNotifications(EventModel event) async {
-    if (kIsWeb) return; // ← skip on web
     final now = DateTime.now();
     final eventTime = event.dateTime;
     final diff = eventTime.difference(now);
@@ -134,8 +130,10 @@ class NotificationService {
   }
 
   // ── Show immediate notification (for bell tap feedback) ────────────────
-  Future<void> showImmediate({required String title, required String body}) async {
-    if (kIsWeb) return; // ← skip on web
+  Future<void> showImmediate({
+    required String title,
+    required String body,
+  }) async {
     await _plugin.show(
       0,
       title,
